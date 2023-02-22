@@ -1,0 +1,25 @@
+###
+
+POST http://localhost:7080/search
+Content-Type: application/json
+
+{
+  "context": {
+    "domain": "dev.test.com",
+    "state": "Karnataka",
+    "city": "Bengaluru",
+    "country": "IN",
+    "action": "search",
+    "core-version": "1.0.0"
+  },
+  "message": {
+      "descriptor": {
+        "id": "1234",
+        "name": "Tejash",
+        "code": "*"
+      }
+  }
+}
+
+
+
