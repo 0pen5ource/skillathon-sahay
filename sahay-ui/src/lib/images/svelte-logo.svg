@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 107 128">
+    <title>svelte-logo</title>
+    <circle cx="53.5" cy="64" r="64" fill="#ff3e00"/>
+    <circle cx="48" cy="48" r="48" fill="#ffff00"/>
+</svg>
