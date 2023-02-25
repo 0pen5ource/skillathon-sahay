@@ -36,6 +36,45 @@ struct UserSigninRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct Context {
+    domain: String,
+    action: String,
+}
+
+#[derive(Serialize)]
+struct Catalog {
+    provider: Descriptor,
+    items: Vec<Item>,
+}
+
+#[derive(Serialize)]
+struct Item {
+    id: String,
+    name: String,
+    descriptor: String,
+    image: String,
+    category: String,
+    price: f64,
+    currency: String,
+    tax: f64,
+    unit: Option<ItemUnit>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct Message {
+    catalog: Catalog,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct OnSearchRequest {
+    context: Context,
+    message: Message,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 struct MentorshipSearchRequest {
     query: String,
 }
@@ -119,6 +158,13 @@ async fn user_register(
         message: "Registration successful. Please check your Telegram for OTP".to_string(),
         session_token,
     })
+}
+
+async fn on_search(
+    db_pool: web::Data<DbPool>,
+    user: web::Json<OnSearchRequest>,
+) -> impl Responder {
+
 }
 
 // #[post("/api/verify")]
@@ -280,7 +326,9 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(pool.clone()))
             .service(web::scope("/api")
                 .route("/register", web::post().to(user_register))
-                .route("/verify", web::post().to(user_signin)))
+                .route("/verify", web::post().to(user_signin))
+                .route("/on_search", web::post().to(on_search))
+            )
     })
         .bind("127.0.0.1:6080")?
         .run()
