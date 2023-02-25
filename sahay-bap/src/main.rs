@@ -72,8 +72,8 @@ struct MentorshipSearchResponse {
 
 #[derive(Deserialize, Debug, Serialize)]
 struct DSEPSearchRequest {
-    context: Context,
-    message: Message,
+    context: Option<Context>,
+    message: Option<Message>,
 }
 
 #[derive(Deserialize, Debug, Serialize)]
@@ -81,50 +81,94 @@ struct SearchRequest {
     session_title: String
 }
 
-
 #[derive(Debug, Serialize, Deserialize)]
 struct Intent {
-    item: Item,
+    item: Option<Item>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 struct Context {
-    domain: String,
-    action: String,
-    bap_id: String,
-    bap_uri: String,
+    domain: Option<String>,
+    action: Option<String>,
+    bap_id: Option<String>,
+    bap_uri: Option<String>,
     bpp_id: Option<String>,
     bpp_uri: Option<String>,
-    timestamp: String,
-    ttl: String,
-    version: String,
-    message_id: String,
-    transaction_id: String
+    timestamp: Option<String>,
+    ttl: Option<String>,
+    version: Option<String>,
+    message_id: Option<String>,
+    transaction_id: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 struct Message {
     catalog: Option<Catalog>,
     intent: Option<Intent>,
+    order: Option<Order>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Order {
+    id: Option<String>,
+    state: Option<String>,
+    r#type: Option<String>,
+    provider: Option<Provider>,
+    items: Option<Vec<Item>>,
+    fulfillments: Option<Vec<Fulfillment>>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 struct Catalog {
-    providers: Vec<Provider>
+    providers: Option<Vec<Provider>>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 struct Provider {
-    categories: Vec<Category>,
-    id: String,
-    descriptor: Descriptor,
-    items: Vec<Item>
+    id: Option<String>,
+    categories: Option<Vec<Category>>,
+    descriptor: Option<Descriptor>,
+    items: Option<Vec<Item>>,
+    fulfillments: Option<Vec<Fulfillment>>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Fulfillment {
+    language: Option<Vec<String>>,
+    id: Option<String>,
+    time: Option<Time>,
+    r#type: Option<String>,
+    tags: Option<Vec<Tag>>,
+    agent: Option<Agent>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct Person {
+    name: Option<String>,
+    id: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct Agent {
+    person: Option<Person>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Time {
+    range: Option<Range>,
+    label: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Range {
+    start: Option<String>,
+    end: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 struct Category {
-    id: String,
-    descriptor: Descriptor
+    id: Option<String>,
+    descriptor: Option<Descriptor>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -138,7 +182,7 @@ struct Descriptor {
 
 #[derive(Debug, Deserialize, Serialize)]
 struct Image {
-    url: String,
+    url: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -149,60 +193,58 @@ struct Item {
     category_ids: Option<Vec<String>>,
     descriptor: Option<Descriptor>,
     fulfillment_ids: Option<Vec<String>>,
-    tags: Option<Vec<Tag>>
+    tags: Option<Vec<Tag>>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 struct Quantity {
-    available: Available,
-    allocated: Allocated
+    available: Option<Count>,
+    allocated: Option<Count>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-struct Available {
-    count: i32
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-struct Allocated {
-    count: i32
+struct Count {
+    count: Option<i32>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 struct Price {
-    value: String
+    value: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 struct Tag {
-    display: bool,
-    descriptor: Descriptor,
-    list: Vec<List>
+    display: Option<bool>,
+    descriptor: Option<Descriptor>,
+    code: Option<String>,
+    name: Option<String>,
+    list: Option<Vec<List>>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 struct List {
-    descriptor: Descriptor
+    descriptor: Option<Descriptor>,
+    code: Option<String>,
+    name: Option<String>,
 }
-
 
 #[derive(Debug, Deserialize, Serialize)]
 struct Ack {
-    status: String,
+    status: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 struct ResponseMessage {
-    ack: Ack,
+    ack: Option<Ack>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 struct ResponseError {
     #[serde(rename = "type")]
-    error_type: String,
-    code: String,
-    path: String,
-    message: String,
+    error_type: Option<String>,
+    code: Option<String>,
+    path: Option<String>,
+    message: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -216,6 +258,7 @@ struct SearchResponse {
     message_id: String,
     transaction_id: String
 }
+
 async fn send_otp_to_telegram(telegram_handle: &str, otp: &str, bot_token: &str) -> Result<(), reqwest::Error> {
     // Construct the message to be sent to Telegram
     let text = format!("Your OTP code is {}", otp);
@@ -278,7 +321,7 @@ async fn user_register(
 async fn health_check( db_pool: web::Data<DbPool>) -> impl Responder {
     info!("Health API called");
     HttpResponse::Ok().json(Ack {
-        status: "UP".to_string()
+        status: Option::from("UP".to_string())
     })
 }
 
@@ -288,12 +331,12 @@ async fn on_search(
 ) -> impl Responder {
     info!("On Search API called {:?}", to_string(&on_search_request));
     HttpResponse::Ok().json(Response {
-        message: Option::from(ResponseMessage { ack: Ack { status: "ACK".to_string() } }),
+        message: Option::from(ResponseMessage { ack: Option::from(Ack { status: Option::from("ACK".to_string()) }) }),
         error: Option::from(ResponseError {
-            error_type: "".to_string(),
-            code: "".to_string(),
-            path: "".to_string(),
-            message: "".to_string()
+            error_type: Option::from("".to_string()),
+            code: Option::from("".to_string()),
+            path: Option::from("".to_string()),
+            message: Option::from("".to_string())
         })
     })
 }
@@ -307,39 +350,40 @@ async fn search(
     let message_id: String = uuid::Uuid::new_v4().to_string();
     let transaction_id: String = uuid::Uuid::new_v4().to_string();
     let request_body = DSEPSearchRequest {
-        context: Context {
-            domain: String::from("dsep:mentoring"),
-            action: String::from("search"),
-            bap_id: String::from("https://sahaay.xiv.in/bap"),
-            bap_uri: String::from("https://sahaay.xiv.in/bap"),
+        context: Option::from(Context {
+            domain: Option::from(String::from("dsep:mentoring")),
+            action: Option::from(String::from("search")),
+            bap_id: Option::from(String::from("https://sahaay.xiv.in/bap")),
+            bap_uri: Option::from(String::from("https://sahaay.xiv.in/bap")),
             bpp_id: None,
             bpp_uri: None,
-            timestamp: String::from(now.to_rfc3339()),
-            message_id: String::from(&message_id),
-            version: String::from("1.0.0"),
-            ttl: String::from("PT10M"),
-            transaction_id: String::from(&transaction_id),
-        },
-        message: Message {
+            timestamp: Option::from(String::from(now.to_rfc3339())),
+            message_id: Option::from(String::from(&message_id)),
+            version: Option::from(String::from("1.0.0")),
+            ttl: Option::from(String::from("PT10M")),
+            transaction_id: Option::from(String::from(&transaction_id)),
+        }),
+        message: Option::from(Message {
             catalog: None,
             intent: Some(Intent {
-                item: Item {
+                item: Option::from(Item {
                     quantity: None,
                     price: None,
                     id: None,
                     category_ids: None,
                     descriptor: Some(Descriptor {
                         code: None,
-                        name: Some(String::from("Management")),
+                        name: Option::from(search_request.session_title.to_string()),
                         short_desc: None,
                         long_desc: None,
                         images: None
                     }),
                     fulfillment_ids: None,
                     tags: None
-                },
+                }),
             }),
-        },
+            order: None
+        }),
     };
     let client = Client::new();
     let mut headers = HeaderMap::new();
@@ -532,6 +576,11 @@ async fn main() -> std::io::Result<()> {
                 .route("/register", web::post().to(user_register))
                 .route("/verify", web::post().to(user_signin))
                 .route("/on_search", web::post().to(on_search))
+                .route("/on_select", web::post().to(on_search))
+                .route("/on_confirm", web::post().to(on_search))
+                .route("/on_init", web::post().to(on_search))
+                .route("/on_status", web::post().to(on_search))
+                .route("/on_cancel", web::post().to(on_search))
                 .route("/search", web::post().to(search))
                 .route("/health", web::get().to(health_check)))
     })
