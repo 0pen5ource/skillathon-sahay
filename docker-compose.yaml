@@ -5,7 +5,8 @@ services:
     ports:
       - "6080:6080"
     environment:
-      - DATABASE_URL=postgres://postgres@db:5432/sahay
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/sahay
+      - RUST_LOG=DEBUG
   db:
     image: postgres
     volumes:

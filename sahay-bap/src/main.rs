@@ -4,7 +4,10 @@ use std::error::Error;
 use actix_web::{App, HttpResponse, HttpServer, post, Responder, web};
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager, Pool};
-use log::{error, info};
+use log::{debug, error, info};
+extern crate log;
+extern crate env_logger;
+
 use rand::Rng;
 use reqwest::{Client, StatusCode};
 use sahay_bap::schema::users;
@@ -250,11 +253,18 @@ async fn user_register(
     })
 }
 
+async fn health_check( db_pool: web::Data<DbPool>) -> impl Responder {
+    info!("Health API called");
+    HttpResponse::Ok().json(Ack {
+        status: "UP".to_string()
+    })
+}
+
 async fn on_search(
     db_pool: web::Data<DbPool>,
     on_search_request: web::Json<SearchRequest>,
 ) -> impl Responder {
-    print!("{:?}", on_search_request);
+    info!("On Search API called {:?}", on_search_request);
     HttpResponse::Ok().json(Response {
         message: ResponseMessage { ack: Ack { status: "ACK".to_string() } },
         error: ResponseError {
@@ -415,7 +425,8 @@ async fn verify(
 // Define the API routes for mentorship search
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    let database_url =  env::var("DATABASE_URL").unwrap_or("postgres://postgres@localhost/sahay".to_string());
+    env_logger::init();
+    let database_url =  env::var("DATABASE_URL").unwrap_or("postgres://postgres:postgres@localhost/sahay".to_string());
     let manager = ConnectionManager::<PgConnection>::new(database_url);
     let pool = Pool::builder().build(manager).unwrap();
 
@@ -426,9 +437,10 @@ async fn main() -> std::io::Result<()> {
             .service(web::scope("/api")
                 .route("/register", web::post().to(user_register))
                 .route("/verify", web::post().to(user_signin))
-                .route("/on_search", web::post().to(on_search)))
+                .route("/on_search", web::post().to(on_search))
+                .route("/health", web::get().to(health_check)))
     })
-        .bind("127.0.0.1:6080")?
+        .bind("0.0.0.0:6080")?
         .run()
         .await
 }
