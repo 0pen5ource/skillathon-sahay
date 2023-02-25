@@ -2,16 +2,19 @@ use std::env;
 use std::error::Error;
 // Dependencies
 use actix_web::{App, HttpResponse, HttpServer, post, Responder, web};
+use chrono::Utc;
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager, Pool};
+use diesel::sql_types::Uuid;
 use log::{debug, error, info};
-use serde_json::{to_string};
+use serde_json::{to_string, Value};
 
 extern crate log;
 extern crate env_logger;
 
 use rand::Rng;
 use reqwest::{Client, StatusCode};
+use reqwest::header::{CONTENT_TYPE, HeaderMap, HeaderValue};
 use sahay_bap::schema::users;
 use sahay_bap::model::{User, NewUser};
 use serde::{Deserialize, Serialize};
@@ -68,11 +71,21 @@ struct MentorshipSearchResponse {
 
 
 #[derive(Deserialize, Debug, Serialize)]
-struct SearchRequest {
+struct DSEPSearchRequest {
     context: Context,
     message: Message,
 }
 
+#[derive(Deserialize, Debug, Serialize)]
+struct SearchRequest {
+    session_title: String
+}
+
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Intent {
+    item: Item,
+}
 
 #[derive(Debug, Deserialize, Serialize)]
 struct Context {
@@ -80,8 +93,8 @@ struct Context {
     action: String,
     bap_id: String,
     bap_uri: String,
-    bpp_id: String,
-    bpp_uri: String,
+    bpp_id: Option<String>,
+    bpp_uri: Option<String>,
     timestamp: String,
     ttl: String,
     version: String,
@@ -91,7 +104,8 @@ struct Context {
 
 #[derive(Debug, Deserialize, Serialize)]
 struct Message {
-    catalog: Catalog
+    catalog: Option<Catalog>,
+    intent: Option<Intent>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -115,8 +129,8 @@ struct Category {
 
 #[derive(Debug, Deserialize, Serialize)]
 struct Descriptor {
-    code: String,
-    name: String,
+    code: Option<String>,
+    name: Option<String>,
     short_desc: Option<String>,
     long_desc: Option<String>,
     images: Option<Vec<Image>>,
@@ -129,13 +143,13 @@ struct Image {
 
 #[derive(Debug, Deserialize, Serialize)]
 struct Item {
-    quantity: Quantity,
-    price: Price,
-    id: String,
-    category_ids: Vec<String>,
-    descriptor: Descriptor,
-    fulfillment_ids: Vec<String>,
-    tags: Vec<Tag>
+    quantity: Option<Quantity>,
+    price: Option<Price>,
+    id: Option<String>,
+    category_ids: Option<Vec<String>>,
+    descriptor: Option<Descriptor>,
+    fulfillment_ids: Option<Vec<String>>,
+    tags: Option<Vec<Tag>>
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -193,8 +207,14 @@ struct ResponseError {
 
 #[derive(Debug, Deserialize, Serialize)]
 struct Response {
-    message: ResponseMessage,
-    error: ResponseError,
+    message: Option<ResponseMessage>,
+    error: Option<ResponseError>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct SearchResponse {
+    message_id: String,
+    transaction_id: String
 }
 async fn send_otp_to_telegram(telegram_handle: &str, otp: &str, bot_token: &str) -> Result<(), reqwest::Error> {
     // Construct the message to be sent to Telegram
@@ -264,17 +284,89 @@ async fn health_check( db_pool: web::Data<DbPool>) -> impl Responder {
 
 async fn on_search(
     db_pool: web::Data<DbPool>,
-    on_search_request: web::Json<SearchRequest>,
+    on_search_request: web::Json<DSEPSearchRequest>,
 ) -> impl Responder {
     info!("On Search API called {:?}", to_string(&on_search_request));
     HttpResponse::Ok().json(Response {
-        message: ResponseMessage { ack: Ack { status: "ACK".to_string() } },
-        error: ResponseError {
+        message: Option::from(ResponseMessage { ack: Ack { status: "ACK".to_string() } }),
+        error: Option::from(ResponseError {
             error_type: "".to_string(),
             code: "".to_string(),
             path: "".to_string(),
             message: "".to_string()
+        })
+    })
+}
+async fn search(
+    db_pool: web::Data<DbPool>,
+    search_request: web::Json<SearchRequest>,
+) -> impl Responder {
+    info!("On Search API called {:?}", to_string(&search_request));
+    let url =  env::var("GATEWAY_URL").unwrap_or("https://gateway.becknprotocol.io/bg/search".to_string());
+    let now = Utc::now();
+    let message_id: String = uuid::Uuid::new_v4().to_string();
+    let transaction_id: String = uuid::Uuid::new_v4().to_string();
+    let request_body = DSEPSearchRequest {
+        context: Context {
+            domain: String::from("dsep:mentoring"),
+            action: String::from("search"),
+            bap_id: String::from("https://sahaay.xiv.in/bap"),
+            bap_uri: String::from("https://sahaay.xiv.in/bap"),
+            bpp_id: None,
+            bpp_uri: None,
+            timestamp: String::from(now.to_rfc3339()),
+            message_id: String::from(&message_id),
+            version: String::from("1.0.0"),
+            ttl: String::from("PT10M"),
+            transaction_id: String::from(&transaction_id),
+        },
+        message: Message {
+            catalog: None,
+            intent: Some(Intent {
+                item: Item {
+                    quantity: None,
+                    price: None,
+                    id: None,
+                    category_ids: None,
+                    descriptor: Some(Descriptor {
+                        code: None,
+                        name: Some(String::from("Management")),
+                        short_desc: None,
+                        long_desc: None,
+                        images: None
+                    }),
+                    fulfillment_ids: None,
+                    tags: None
+                },
+            }),
+        },
+    };
+    let client = Client::new();
+    let mut headers = HeaderMap::new();
+    headers.insert(
+        CONTENT_TYPE,
+        HeaderValue::from_static("application/json"),
+    );
+
+    let response = client
+        .post(url)
+        .headers(headers)
+        .json(&request_body)
+        .send()
+        .await;
+
+    // info!("Gateway search response: {:?}", response);
+    match response {
+        Ok(v) => {
+            info!("Gateway search response: {:?}", v.json::<Response>().await)
         }
+        Err(e) => {
+            error!("Gateway search error: {:?}", e)
+        }
+    }
+    HttpResponse::Ok().json(SearchResponse {
+        message_id,
+        transaction_id
     })
 }
 
@@ -440,6 +532,7 @@ async fn main() -> std::io::Result<()> {
                 .route("/register", web::post().to(user_register))
                 .route("/verify", web::post().to(user_signin))
                 .route("/on_search", web::post().to(on_search))
+                .route("/search", web::post().to(search))
                 .route("/health", web::get().to(health_check)))
     })
         .bind("0.0.0.0:6080")?
