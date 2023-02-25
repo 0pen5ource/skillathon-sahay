@@ -5,6 +5,8 @@ use actix_web::{App, HttpResponse, HttpServer, post, Responder, web};
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager, Pool};
 use log::{debug, error, info};
+use serde_json::{to_string};
+
 extern crate log;
 extern crate env_logger;
 
@@ -65,14 +67,14 @@ struct MentorshipSearchResponse {
 }
 
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Serialize)]
 struct SearchRequest {
     context: Context,
     message: Message,
 }
 
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct Context {
     domain: String,
     action: String,
@@ -87,17 +89,17 @@ struct Context {
     transaction_id: String
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct Message {
     catalog: Catalog
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct Catalog {
     providers: Vec<Provider>
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct Provider {
     categories: Vec<Category>,
     id: String,
@@ -105,13 +107,13 @@ struct Provider {
     items: Vec<Item>
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct Category {
     id: String,
     descriptor: Descriptor
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct Descriptor {
     code: String,
     name: String,
@@ -120,12 +122,12 @@ struct Descriptor {
     images: Option<Vec<Image>>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct Image {
     url: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct Item {
     quantity: Quantity,
     price: Price,
@@ -136,35 +138,35 @@ struct Item {
     tags: Vec<Tag>
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct Quantity {
     available: Available,
     allocated: Allocated
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct Available {
     count: i32
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct Allocated {
     count: i32
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct Price {
     value: String
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct Tag {
     display: bool,
     descriptor: Descriptor,
     list: Vec<List>
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 struct List {
     descriptor: Descriptor
 }
@@ -264,7 +266,7 @@ async fn on_search(
     db_pool: web::Data<DbPool>,
     on_search_request: web::Json<SearchRequest>,
 ) -> impl Responder {
-    info!("On Search API called {:?}", on_search_request);
+    info!("On Search API called {:?}", to_string(&on_search_request));
     HttpResponse::Ok().json(Response {
         message: ResponseMessage { ack: Ack { status: "ACK".to_string() } },
         error: ResponseError {
