@@ -36,45 +36,6 @@ struct UserSigninRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct Context {
-    domain: String,
-    action: String,
-}
-
-#[derive(Serialize)]
-struct Catalog {
-    provider: Descriptor,
-    items: Vec<Item>,
-}
-
-#[derive(Serialize)]
-struct Item {
-    id: String,
-    name: String,
-    descriptor: String,
-    image: String,
-    category: String,
-    price: f64,
-    currency: String,
-    tax: f64,
-    unit: Option<ItemUnit>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct Message {
-    catalog: Catalog,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct OnSearchRequest {
-    context: Context,
-    message: Message,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
 struct MentorshipSearchRequest {
     query: String,
 }
@@ -100,7 +61,135 @@ struct MentorshipSearchResponse {
 }
 
 
+#[derive(Deserialize, Debug)]
+struct SearchRequest {
+    context: Context,
+    message: Message,
+}
 
+
+#[derive(Debug, Deserialize)]
+struct Context {
+    domain: String,
+    action: String,
+    bap_id: String,
+    bap_uri: String,
+    bpp_id: String,
+    bpp_uri: String,
+    timestamp: String,
+    ttl: String,
+    version: String,
+    message_id: String,
+    transaction_id: String
+}
+
+#[derive(Debug, Deserialize)]
+struct Message {
+    catalog: Catalog
+}
+
+#[derive(Debug, Deserialize)]
+struct Catalog {
+    providers: Vec<Provider>
+}
+
+#[derive(Debug, Deserialize)]
+struct Provider {
+    categories: Vec<Category>,
+    id: String,
+    descriptor: Descriptor,
+    items: Vec<Item>
+}
+
+#[derive(Debug, Deserialize)]
+struct Category {
+    id: String,
+    descriptor: Descriptor
+}
+
+#[derive(Debug, Deserialize)]
+struct Descriptor {
+    code: String,
+    name: String,
+    short_desc: Option<String>,
+    long_desc: Option<String>,
+    images: Option<Vec<Image>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct Image {
+    url: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct Item {
+    quantity: Quantity,
+    price: Price,
+    id: String,
+    category_ids: Vec<String>,
+    descriptor: Descriptor,
+    fulfillment_ids: Vec<String>,
+    tags: Vec<Tag>
+}
+
+#[derive(Debug, Deserialize)]
+struct Quantity {
+    available: Available,
+    allocated: Allocated
+}
+
+#[derive(Debug, Deserialize)]
+struct Available {
+    count: i32
+}
+
+#[derive(Debug, Deserialize)]
+struct Allocated {
+    count: i32
+}
+
+#[derive(Debug, Deserialize)]
+struct Price {
+    value: String
+}
+
+#[derive(Debug, Deserialize)]
+struct Tag {
+    display: bool,
+    descriptor: Descriptor,
+    list: Vec<List>
+}
+
+#[derive(Debug, Deserialize)]
+struct List {
+    descriptor: Descriptor
+}
+
+
+#[derive(Debug, Deserialize, Serialize)]
+struct Ack {
+    status: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct ResponseMessage {
+    ack: Ack,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct ResponseError {
+    #[serde(rename = "type")]
+    error_type: String,
+    code: String,
+    path: String,
+    message: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct Response {
+    message: ResponseMessage,
+    error: ResponseError,
+}
 async fn send_otp_to_telegram(telegram_handle: &str, otp: &str, bot_token: &str) -> Result<(), reqwest::Error> {
     // Construct the message to be sent to Telegram
     let text = format!("Your OTP code is {}", otp);
@@ -162,9 +251,18 @@ async fn user_register(
 
 async fn on_search(
     db_pool: web::Data<DbPool>,
-    user: web::Json<OnSearchRequest>,
+    on_search_request: web::Json<SearchRequest>,
 ) -> impl Responder {
-
+    print!("{:?}", on_search_request);
+    HttpResponse::Ok().json(Response {
+        message: ResponseMessage { ack: Ack { status: "ACK".to_string() } },
+        error: ResponseError {
+            error_type: "".to_string(),
+            code: "".to_string(),
+            path: "".to_string(),
+            message: "".to_string()
+        }
+    })
 }
 
 // #[post("/api/verify")]
@@ -327,8 +425,7 @@ async fn main() -> std::io::Result<()> {
             .service(web::scope("/api")
                 .route("/register", web::post().to(user_register))
                 .route("/verify", web::post().to(user_signin))
-                .route("/on_search", web::post().to(on_search))
-            )
+                .route("/on_search", web::post().to(on_search)))
     })
         .bind("127.0.0.1:6080")?
         .run()
