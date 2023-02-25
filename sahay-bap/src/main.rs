@@ -1,3 +1,4 @@
+use std::env;
 use std::error::Error;
 // Dependencies
 use actix_web::{App, HttpResponse, HttpServer, post, Responder, web};
@@ -414,7 +415,7 @@ async fn verify(
 // Define the API routes for mentorship search
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    let database_url = "postgres://postgres@localhost/sahay";
+    let database_url =  env::var("DATABASE_URL").unwrap_or("postgres://postgres@localhost/sahay".to_string());
     let manager = ConnectionManager::<PgConnection>::new(database_url);
     let pool = Pool::builder().build(manager).unwrap();
 
