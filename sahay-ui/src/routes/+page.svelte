@@ -171,7 +171,9 @@
 <!--		<textarea bind:value={log} style="position: absolute; bottom: 0"/>-->
 	{:else}
 		<a href="/signup">Enroll</a>
-		<h1>
+
+	{/if}
+	<h1>
 			<span class="welcome">
 				<picture>
 	<!--				<source srcset={welcome} type="image/webp" />-->
@@ -180,9 +182,7 @@
 			</span>
 
 
-		</h1>
-	{/if}
-
+	</h1>
 
 
 </section>
@@ -213,6 +213,7 @@
 		/*width: 100%;*/
 		/*height: 100%;*/
 		top: 0;
+		filter: opacity(0.3);
 		/*display: block;*/
 	}
 </style>
