@@ -1,0 +1,8 @@
+node_modules
+.idea
+build
+.svelte-kit
+.dockerignore
+.gitignore
+package-lock.json
+yarn.lock
