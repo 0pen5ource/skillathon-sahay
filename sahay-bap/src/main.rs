@@ -1,7 +1,12 @@
+use std::collections::HashMap;
 use std::env;
 use std::error::Error;
 use std::future;
 use std::future::Future;
+use std::ops::Deref;
+use std::sync::Arc;
+use std::sync::atomic::AtomicUsize;
+use std::time::Instant;
 // Dependencies
 use actix_web::{App, cookie, HttpResponse, HttpServer, post, Responder, web};
 use actix_web::dev::{Service, ServiceRequest};
@@ -26,10 +31,12 @@ use actix_session::{Session, SessionMiddleware};
 use actix_session::storage::CookieSessionStore;
 use actix_web::cookie::Cookie;
 use futures::TryFutureExt;
-use actix::{Actor, StreamHandler};
+use actix::{Actor, Addr, AsyncContext, Message, Recipient, StreamHandler};
 use actix_web::web::Json;
 use actix_web_actors::ws;
 
+mod server;
+mod session;
 
 // Database connection pool
 type DbPool = Pool<ConnectionManager<PgConnection>>;
@@ -85,7 +92,7 @@ struct MentorshipSearchResponse {
 #[derive(Deserialize, Debug, Serialize)]
 struct DSEPSearchRequest {
     context: Option<Context>,
-    message: Option<Message>,
+    message: Option<MessageV1>,
 }
 
 #[derive(Deserialize, Debug, Serialize)]
@@ -115,7 +122,7 @@ struct Context {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-struct Message {
+struct MessageV1 {
     catalog: Option<Catalog>,
     intent: Option<Intent>,
     order: Option<Order>,
@@ -618,34 +625,80 @@ pub fn jwt_auth_middleware(
 }
 
  */
-struct MyWs;
+// #[derive(Debug)]
+// pub struct WsSession {
+//     /// unique session id
+//     pub id: usize,
+//     // pub addr: Addr<MessageServer>,
+//     pub srv : MessageServer,
+// }
 
-impl Actor for MyWs {
-    type Context = ws::WebsocketContext<Self>;
+//
+// impl Actor for WsSession {
+//     type Context = ws::WebsocketContext<Self>;
+//     fn started(&mut self, ctx: &mut Self::Context) {
+//         let addr:Addr<MessageServer> = ctx.address();
+//         let recipient:Recipient<WsMessage> = addr.recipient();
+//         self.register(1, recipient);
+//     }
+// }
+
+// /// Handler for ws::Message message
+// impl StreamHandler<Result<actix_web_actors::ws::Message, ws::ProtocolError>> for WsSession {
+//     fn handle(&mut self, msg: Result<actix_web_actors::ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
+//         match msg {
+//             Ok(ws::Message::Ping(msg)) => ctx.pong(&msg),
+//             Ok(ws::Message::Text(text)) => ctx.text(text),
+//             Ok(ws::Message::Binary(bin)) => ctx.binary(bin),
+//             _ => (),
+//         }
+//     }
+// }
+//
+// impl actix::Handler<WsMessage> for WsSession {
+//     type Result = ();
+//
+//     fn handle(&mut self, msg: WsMessage, ctx: &mut Self::Context) -> Self::Result {
+//         todo!()
+//     }
+// }
+
+/// Entry point for our websocket route
+async fn chat_route(
+    req: actix_web::HttpRequest,
+    stream: web::Payload,
+    srv: web::Data<Addr<server::ChatServer>>,
+) -> Result<HttpResponse, actix_web::Error> {
+    println!("got ws request: {:?}", req);
+    let result = ws::start(
+        session::WsChatSession {
+            id: 0,
+            hb: Instant::now(),
+            room: "main".to_owned(),
+            name: None,
+            addr: srv.get_ref().clone(),
+        },
+        &req,
+        stream,
+    );
+    println!("after ws request: {:?}", req);
+    result
 }
 
-/// Handler for ws::Message message
-impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for MyWs {
-    fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
-        match msg {
-            Ok(ws::Message::Ping(msg)) => ctx.pong(&msg),
-            Ok(ws::Message::Text(text)) => ctx.text(text),
-            Ok(ws::Message::Binary(bin)) => ctx.binary(bin),
-            _ => (),
-        }
-    }
-}
-
+/*
 async fn ws_notification_handler(
     req: actix_web::HttpRequest,
     stream: web::Payload,
     session: Session,
     db: web::Data<Pool<ConnectionManager<PgConnection>>>,
+    message_server: web::Data<MessageServer>,
 ) -> Result<HttpResponse, actix_web::Error>  {
     println!("got ws request: {:?}", req);
-    let resp = ws::start(MyWs {}, &req, stream);
+    let srv : WsSession = WsSession{ id: 1, srv: *message_server.get_ref() };
+    let resp = ws::start(srv, &req, stream);
     resp
-}
+}*/
+
 
 async fn on_status(
     db_pool: web::Data<DbPool>,
@@ -692,6 +745,9 @@ async fn main() -> std::io::Result<()> {
     let key = b"234234a";
     let encoding_key = EncodingKey::from_secret(key);
     let decoding_key = DecodingKey::from_secret(key);
+    // start chat server actor
+    let app_state = Arc::new(AtomicUsize::new(0));
+    let server = server::ChatServer::new(app_state.clone()).start();
 
     // Set up the Actix Web server and register the routes
     HttpServer::new(move || {
@@ -720,7 +776,7 @@ async fn main() -> std::io::Result<()> {
                 .route("/on_cancel", web::post().to(on_search))
                 .route("/search", web::post().to(search))
                 .route("/health", web::get().to(health_check))
-                .route("/ws", web::get().to(ws_notification_handler))
+                .route("/ws", web::get().to(chat_route))
             )
     })
         .bind("0.0.0.0:6080")?
