@@ -21,6 +21,7 @@
 		})
 		const data = await resp.json()
 		log += JSON.stringify(data, null, 2)
+		result = {"message":{"catalog":{"providers":[]}}};
 	};
 
 	let result = {"message":{"catalog":{"providers":[]}}};
@@ -35,7 +36,11 @@
 				const dsepResponse = JSON.parse(currentMessage)
 				type = dsepResponse.context.action;
 				if (dsepResponse.context.action === "on_search") {
-					result = dsepResponse;
+					if (result.message.catalog.providers.length > 0) {
+						result.message.catalog.providers.push(...dsepResponse.message.catalog.providers)
+					} else {
+						result = dsepResponse;
+					}
 				}
 				if (dsepResponse.context.action === "on_select") {
 					result = dsepResponse;
@@ -93,6 +98,7 @@
 			})
 		})
 		data = await resp.json()
+		console.log(data);
 		log += JSON.stringify(data, null, 2)
 	}
 
@@ -107,8 +113,8 @@
 	{#if token}
 		<label for="search"></label>
 		<span>
-		<input id="search" bind:value={searchText} placeholder="Language tutor">
-		<button on:click={search}>Search Mentors</button>
+		<input id="search" bind:value={searchText} placeholder="Mentorship program">
+		<button on:click={search}>Search</button>
 		</span>
 		<br/>
 
@@ -123,8 +129,9 @@
 					select(item.id, result.context.bpp_uri, result.context.message_id, result.context.transaction_id )}>View Details</button></td></tr>
 				{/each}
 			{/each}
-			{:else}
-				<tr><td>Please search for mentors with keywords</td></tr>
+			{/if}
+			{#if type === ""}
+				<tr><td>Please search for mentorship programs </td></tr>
 			{/if}
 			{#if type === "on_select" && Object.keys(result?.message?.order?.provider || {}).length > 0}
 				<tr><td><h3>{result?.message?.order?.provider.descriptor.name}</h3></td></tr>
@@ -161,7 +168,7 @@
 				<a target="_blank" href='https://sahaay.xiv.in/bap/pdf/{certificateOsid}'>View Certificate</a>
 			{/if}
 			</table>
-		<textarea bind:value={log} style="position: absolute; bottom: 0"/>
+<!--		<textarea bind:value={log} style="position: absolute; bottom: 0"/>-->
 	{:else}
 		<a href="/signup">Enroll</a>
 		<h1>
