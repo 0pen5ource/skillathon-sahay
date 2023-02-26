@@ -49,6 +49,7 @@
 	.corner {
 		width: 7em;
 		height: 3em;
+		visibility: hidden;
 	}
 
 	.corner a {
