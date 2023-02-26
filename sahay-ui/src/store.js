@@ -12,7 +12,7 @@ const sendMessage = (message) => {
 }
 
 const subscribeWs = (callback) => {
-    socket = new WebSocket('wss://sahay.xiv.in/ws');
+    socket = new WebSocket('wss://sahaay.xiv.in/bap/ws');
 
 // Connection opened
     socket.addEventListener('open', function (event) {

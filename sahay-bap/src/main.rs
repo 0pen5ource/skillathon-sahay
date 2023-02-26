@@ -32,8 +32,13 @@ use actix_session::storage::CookieSessionStore;
 use actix_web::cookie::Cookie;
 use futures::TryFutureExt;
 use actix::{Actor, Addr, AsyncContext, Recipient, StreamHandler};
-use actix_web::web::Json;
+use actix_web::web::{Data, Json};
 use actix_web_actors::ws;
+#[macro_use]
+extern crate lazy_static;
+use std::sync::Mutex;
+use crate::server::ChatServer;
+
 
 mod server;
 mod session;
@@ -108,6 +113,20 @@ struct SelectRequest {
     transaction_id: String,
     message_id: String,
     item_id: String
+}
+
+#[derive(Deserialize, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct InitRequest {
+    bpp_uri: String,
+    transaction_id: String,
+    mentorship_title: String,
+    message_id: String,
+    item_id: String,
+    fullfillment_id: String,
+    card: String,
+    email_id: String,
+    name: String
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -363,7 +382,7 @@ async fn on_search(
     let payload = format!("{:?}", to_string(&on_search_request));
     srv.do_send(server::OnSearch{
         id: 1,
-        payload: payload
+        payload: to_string(&on_search_request).unwrap()
     });
     HttpResponse::Ok().json(Response {
         message: Option::from(ResponseMessage { ack: Option::from(Ack { status: Option::from("ACK".to_string()) }) }),
@@ -706,26 +725,28 @@ async fn ws_notification_handler(
 }*/
 
 
-async fn on_status(
+async fn on_confirm(
     db_pool: web::Data<DbPool>,
     on_status_request: web::Json<DSEPSearchRequest>,
     srv: web::Data<Addr<server::ChatServer>>,
 ) -> impl Responder {
-    // info!("On Search API called {:?}", to_string(&on_status_request));
-    issue_credentials(&on_status_request).await;
+    info!("On Confirm API called {:?}", to_string(&on_status_request));
+    issue_credentials(&on_status_request, srv.clone()).await;
     return on_search(db_pool, on_status_request, srv).await
 }
 
-async fn issue_credentials (on_status_request: &Json<DSEPSearchRequest>) -> Result<(), Box<dyn std::error::Error>> {
+async fn issue_credentials (on_confirm_request: &Json<DSEPSearchRequest>, srv: Data<Addr<ChatServer>>) -> Result<(), Box<dyn std::error::Error>> {
+    let map = USERMAP.lock().unwrap();
+    let transaction_id = on_confirm_request.context.as_ref().unwrap().transaction_id.as_ref().unwrap();
+    let user_data = map.get(transaction_id);
     let url =  env::var("REGISTRY_URL").unwrap_or("http://localhost:8081/api/v1/ProofOfAssociation".to_string());
-    let name = "Tejash";
     let json = format!(r#"{{ "name": "{}", "userId": "{}", "emailId": "{}", "type": "{}",
-    "associatedFor": "{}", "agentName": "{}", "startDate": "{}", "endDate": "{}" }}"#, name, name, name,
-                       on_status_request.context.as_ref().unwrap().domain.as_ref().unwrap(),
-                       on_status_request.message.as_ref().unwrap().order.as_ref().unwrap().provider.as_ref().unwrap().items.as_ref().unwrap()[0].descriptor.as_ref().unwrap().name.as_ref().unwrap(),
-                       on_status_request.message.as_ref().unwrap().order.as_ref().unwrap().provider.as_ref().unwrap().fulfillments.as_ref().unwrap()[0].agent.as_ref().unwrap().person.as_ref().unwrap().name.as_ref().unwrap(),
-                       on_status_request.message.as_ref().unwrap().order.as_ref().unwrap().provider.as_ref().unwrap().fulfillments.as_ref().unwrap()[0].time.as_ref().unwrap().range.as_ref().unwrap().start.as_ref().unwrap(),
-                       on_status_request.message.as_ref().unwrap().order.as_ref().unwrap().provider.as_ref().unwrap().fulfillments.as_ref().unwrap()[0].time.as_ref().unwrap().range.as_ref().unwrap().end.as_ref().unwrap());
+    "associatedFor": "{}", "agentName": "{}", "startDate": "{}", "endDate": "{}" }}"#, user_data.as_ref().unwrap().name, user_data.as_ref().unwrap().transactionId, user_data.as_ref().unwrap().emailId,
+                       on_confirm_request.context.as_ref().unwrap().domain.as_ref().unwrap(),
+                       user_data.as_ref().unwrap().mentorshipTitle,
+                       on_confirm_request.message.as_ref().unwrap().order.as_ref().unwrap().fulfillments.as_ref().unwrap()[0].agent.as_ref().unwrap().person.as_ref().unwrap().name.as_ref().unwrap(),
+                       on_confirm_request.message.as_ref().unwrap().order.as_ref().unwrap().fulfillments.as_ref().unwrap()[0].time.as_ref().unwrap().range.as_ref().unwrap().start.as_ref().unwrap(),
+                       on_confirm_request.message.as_ref().unwrap().order.as_ref().unwrap().fulfillments.as_ref().unwrap()[0].time.as_ref().unwrap().range.as_ref().unwrap().end.as_ref().unwrap());
     let client = reqwest::Client::new();
     let mut headers = HeaderMap::new();
     headers.insert(CONTENT_TYPE, "application/json".parse().unwrap());
@@ -738,6 +759,10 @@ async fn issue_credentials (on_status_request: &Json<DSEPSearchRequest>) -> Resu
     let body = response.text().await?;
     info!("Response Status: {}", status);
     info!("Response Body: {}", body);
+    srv.do_send(server::OnSearch{
+        id: 1,
+        payload: body
+    });
     Ok(())
 }
 
@@ -746,14 +771,34 @@ async fn select(
     select_request: web::Json<SelectRequest>,
 ) -> impl Responder {
     info!("Select API called {:?}", to_string(&select_request));
-    let url =  &select_request.bpp_uri;
+    let url =  format!("{}/select", select_request.bpp_uri);
     let now = Utc::now();
     let message_id = Option::from(String::from(&select_request.message_id));
     let transaction_id = Option::from(String::from(&select_request.transaction_id));
-    let request_body = DSEPSearchRequest {
+    let body = format!(r#"{{
+    "context": {{
+        "domain": "dsep:mentoring",
+        "action": "select",
+        "bap_id": "https://sahaay.xiv.in/bap",
+        "bap_uri": "https://sahaay.xiv.in/bap",
+        "timestamp": "2023-02-25T10:07:42.877Z",
+        "message_id": "{}",
+        "version": "1.0.0",
+        "ttl": "PT10M",
+        "transaction_id": "{}"
+    }},
+    "message": {{
+        "order": {{
+            "item": {{
+                "id": "{}"
+            }}
+        }}
+    }}
+}}"#, select_request.message_id, select_request.transaction_id, select_request.item_id);
+    /*let request_body = DSEPSearchRequest {
         context: Option::from(Context {
             domain: Option::from(String::from("dsep:mentoring")),
-            action: Option::from(String::from("search")),
+            action: Option::from(String::from("select")),
             bap_id: Option::from(String::from("https://sahaay.xiv.in/bap")),
             bap_uri: Option::from(String::from("https://sahaay.xiv.in/bap")),
             bpp_id: None,
@@ -784,7 +829,7 @@ async fn select(
                 fulfillments: None
             })
         }),
-    };
+    };*/
     let client = Client::new();
     let mut headers = HeaderMap::new();
     headers.insert(
@@ -795,7 +840,7 @@ async fn select(
     let response = client
         .post(url)
         .headers(headers)
-        .json(&request_body)
+        .body(body)
         .send()
         .await;
 
@@ -804,6 +849,149 @@ async fn select(
         transaction_id: transaction_id.unwrap().clone()
     })
 }
+async fn init(
+    db_pool: web::Data<DbPool>,
+    init_request: web::Json<InitRequest>,
+) -> impl Responder {
+    info!("Init API called {:?}", to_string(&init_request));
+    let url =  format!("{}/init", init_request.bpp_uri);
+    let now = Utc::now();
+    let message_id = Option::from(String::from(&init_request.message_id));
+    let transaction_id = Option::from(String::from(&init_request.transaction_id));
+    let body = format!(r#"{{
+    "context": {{
+        "domain": "dsep:mentoring",
+        "action": "init",
+        "bap_id": "https://sahaay.xiv.in/bap",
+        "bap_uri": "https://sahaay.xiv.in/bap",
+        "timestamp": "2023-02-25T10:07:42.877Z",
+        "message_id": "{}",
+        "version": "1.0.0",
+        "ttl": "PT10M",
+        "transaction_id": "{}"
+    }},
+    "message": {{
+        "order": {{
+            "items": [{{
+                "id": "{}"
+            }}],
+            "fulfillments": [{{
+                "id": "{}"
+            }}],
+            "billing": {{
+                "card": "{}",
+                "name": "{}",
+                "phone": "881-311-2951 x01508",
+                "email": "{}",
+                "time": {{
+                    "timezone": "IST"
+                }}
+            }}
+        }}
+    }}
+}}"#, init_request.message_id, init_request.transaction_id, init_request.item_id, init_request.fullfillment_id, init_request.card, init_request.name, init_request.email_id);
+    let client = Client::new();
+    let mut headers = HeaderMap::new();
+    headers.insert(
+        CONTENT_TYPE,
+        HeaderValue::from_static("application/json"),
+    );
+
+    let response = client
+        .post(url)
+        .headers(headers)
+        .body(body)
+        .send()
+        .await;
+
+    HttpResponse::Ok().json(SearchResponse {
+        message_id: message_id.unwrap().clone(),
+        transaction_id: transaction_id.unwrap().clone()
+    })
+}
+struct UserData {
+    name: String,
+    emailId: String,
+    messageId: String,
+    transactionId: String,
+    mentorshipTitle: String,
+}
+lazy_static! {
+    static ref USERMAP: Mutex<HashMap<String, UserData>> = {
+        let m = HashMap::new();
+        Mutex::new(m)
+    };
+}
+
+async fn confirm(
+    db_pool: web::Data<DbPool>,
+    init_request: web::Json<InitRequest>,
+) -> impl Responder {
+    info!("Confirm API called {:?}", to_string(&init_request));
+    let mut map = USERMAP.lock().unwrap();
+    map.insert(init_request.transaction_id.clone(), UserData{
+        name: init_request.name.to_string(),
+        emailId: init_request.email_id.to_string(),
+        messageId: init_request.message_id.to_string(),
+        transactionId: init_request.transaction_id.to_string(),
+        mentorshipTitle: init_request.mentorship_title.to_string()
+    });
+    let url =  format!("{}/confirm", init_request.bpp_uri);
+    let now = Utc::now();
+    let message_id = Option::from(String::from(&init_request.message_id));
+    let transaction_id = Option::from(String::from(&init_request.transaction_id));
+    let body = format!(r#"{{
+    "context": {{
+        "domain": "dsep:mentoring",
+        "action": "confirm",
+        "bap_id": "https://sahaay.xiv.in/bap",
+        "bap_uri": "https://sahaay.xiv.in/bap",
+        "timestamp": "2023-02-25T10:07:42.877Z",
+        "message_id": "{}",
+        "version": "1.0.0",
+        "ttl": "PT10M",
+        "transaction_id": "{}"
+    }},
+    "message": {{
+        "order": {{
+            "items": [{{
+                "id": "{}"
+            }}],
+            "fulfillments": [{{
+                "id": "{}"
+            }}],
+            "billing": {{
+                "card": "{}",
+                "name": "{}",
+                "phone": "881-311-2951 x01508",
+                "email": "{}",
+                "time": {{
+                    "timezone": "IST"
+                }}
+            }}
+        }}
+    }}
+}}"#, init_request.message_id, init_request.transaction_id, init_request.item_id, init_request.fullfillment_id, init_request.card, init_request.name, init_request.email_id);
+    let client = Client::new();
+    let mut headers = HeaderMap::new();
+    headers.insert(
+        CONTENT_TYPE,
+        HeaderValue::from_static("application/json"),
+    );
+
+    let response = client
+        .post(url)
+        .headers(headers)
+        .body(body)
+        .send()
+        .await;
+
+    HttpResponse::Ok().json(SearchResponse {
+        message_id: message_id.unwrap().clone(),
+        transaction_id: transaction_id.unwrap().clone()
+    })
+}
+
 
 // Define the API routes for mentorship search
 #[actix_web::main]
@@ -842,12 +1030,14 @@ async fn main() -> std::io::Result<()> {
                 .route("/verify", web::post().to(user_signin))
                 .route("/on_search", web::post().to(on_search))
                 .route("/on_select", web::post().to(on_search))
-                .route("/on_confirm", web::post().to(on_search))
+                .route("/on_status", web::post().to(on_search))
                 .route("/on_init", web::post().to(on_search))
-                .route("/on_status", web::post().to(on_status))
+                .route("/on_confirm", web::post().to(on_confirm))
                 .route("/on_cancel", web::post().to(on_search))
                 .route("/search", web::post().to(search))
                 .route("/select", web::post().to(select))
+                .route("/init", web::post().to(init))
+                .route("/confirm", web::post().to(confirm))
                 .route("/health", web::get().to(health_check))
                 .route("/ws", web::get().to(chat_route))
             )

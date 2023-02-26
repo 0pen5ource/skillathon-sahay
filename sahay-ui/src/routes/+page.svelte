@@ -21,19 +21,79 @@
 		})
 		const data = await resp.json()
 		log += JSON.stringify(data, null, 2)
-		result = {  "context": {    "domain": "dsep:mentoring",    "action": "on_search",    "bap_id": "https://sahaay.xiv.in/bap",    "bap_uri": "https://sahaay.xiv.in/bap",    "bpp_id": "dev.elevate-apis.shikshalokam.org/bpp",    "bpp_uri": "https://dev.elevate-apis.shikshalokam.org/bpp",    "timestamp": "2023-02-26T04:39:58.316Z",    "ttl": "PT10M",    "version": "1.0.0",    "message_id": "d3a075b2-a5f6-4d01-9e09-2fb356e1a12c",    "transaction_id": "ebb98d27-1b73-4d20-acdc-dd8bef91de24"  },  "message": {    "catalog": {      "providers": [        {          "id": "63d103e62d52ec96cf85efa5",          "categories": [            {              "id": "4229d975-43ae-e560-3ed5-439283800560",              "descriptor": {                "code": "4229d975-43ae-e560-3ed5-439283800560",                "name": "Master of science ",                "short_desc": null,                "long_desc": null,                "images": null              }            }          ],          "descriptor": {            "code": "org1",            "name": "ShikshalokamOne",            "short_desc": "ShikshalokamOrgOne",            "long_desc": null,            "images": null          },          "items": [            {              "quantity": {                "available": {                  "count": 5                },                "allocated": {                  "count": 10                }              },              "price": {                "value": "0"              },              "id": "63fa069b23df0828569386ea",              "category_ids": [                "4229d975-43ae-e560-3ed5-439283800560"              ],              "descriptor": {                "code": "mentorship for MS",                "name": "mentorship for MS",                "short_desc": "mentorship for MS",                "long_desc": "mentorship for MS",                "images": [                  {                    "url": "https://loremflickr.com/640/480/abstract?random=yroxtztln5"                  }                ]              },              "fulfillment_ids": [                "90f0d8db-5b5b-4d25-847f-5383ab627dcb"              ],              "tags": [                {                  "display": true,                  "descriptor": {                    "code": "recommended_for",                    "name": "recommended_for",                    "short_desc": null,                    "long_desc": null,                    "images": null                  },                  "code": null,                  "name": null,                  "list": [                    {                      "descriptor": {                        "code": "1902e455-5282-f636-7f7d-bd123c16f26d",                        "name": "Master graduation ",                        "short_desc": null,                        "long_desc": null,                        "images": null                      },                      "code": null,                      "name": null                    }                  ]                },                {                  "display": true,                  "descriptor": {                    "code": "about_mentor",                    "name": "About Mentor",                    "short_desc": null,                    "long_desc": null,                    "images": null                  },                  "code": null,                  "name": null,                  "list": [                    {                      "descriptor": {                        "code": "about_mentor",                        "name": "This mentor is a true pioneer in their field, having helped to shape the industry in countless ways over the course of their career. They are highly respected for their expertise and leadership, and are always eager to share their insights with others. With a deep understanding of the industry's history and a keen eye for future trends, this mentor is a powerful ally for anyone looking to make their mark in this field.",                        "short_desc": null,                        "long_desc": null,                        "images": null                      },                      "code": null,                      "name": null                    }                  ]                },                {                  "display": true,                  "descriptor": {                    "code": "professional_experience",                    "name": "Professional Experience",                    "short_desc": null,                    "long_desc": null,                    "images": null                  },                  "code": null,                  "name": null,                  "list": [                    {                      "descriptor": {                        "code": "professional_experience",                        "name": "Principal Engineer | Chief Innovation Officer - ThinkTank Solutions",                        "short_desc": null,                        "long_desc": null,                        "images": null                      },                      "code": null,                      "name": null                    }                  ]                },                {                  "display": true,                  "descriptor": {                    "code": "qualification",                    "name": "Qualification",                    "short_desc": null,                    "long_desc": null,                    "images": null                  },                  "code": null,                  "name": null,                  "list": [                    {                      "descriptor": {                        "code": "qualification",                        "name": "Ph.D from NID Ahmedabad",                        "short_desc": null,                        "long_desc": null,                        "images": null                      },                      "code": null,                      "name": null                    }                  ]                },                {                  "display": true,                  "descriptor": {                    "code": "experience",                    "name": "Experience",                    "short_desc": null,                    "long_desc": null,                    "images": null                  },                  "code": null,                  "name": null,                  "list": [                    {                      "descriptor": {                        "code": "experience",                        "name": "13 Years",                        "short_desc": null,                        "long_desc": null,                        "images": null                      },                      "code": null,                      "name": null                    }                  ]                },                {                  "display": true,                  "descriptor": {                    "code": "total_meetings",                    "name": "Total Meetings",                    "short_desc": null,                    "long_desc": null,                    "images": null                  },                  "code": null,                  "name": null,                  "list": [                    {                      "descriptor": {                        "code": "total_meetings",                        "name": "88+",                        "short_desc": null,                        "long_desc": null,                        "images": null                      },                      "code": null,                      "name": null                    }                  ]                },                {                  "display": true,                  "descriptor": {                    "code": "specialist_in",                    "name": "Specialist In",                    "short_desc": null,                    "long_desc": null,                    "images": null                  },                  "code": null,                  "name": null,                  "list": [                    {                      "descriptor": {                        "code": "specialist_in",                        "name": "UI/UX Design",                        "short_desc": null,                        "long_desc": null,                        "images": null                      },                      "code": null,                      "name": null                    }                  ]                }              ]            }          ],          "fulfillments": [            {              "language": [                "English"              ],              "id": "90f0d8db-5b5b-4d25-847f-5383ab627dcb",              "time": {                "range": {                  "start": "2023-02-25T18:59:00",                  "end": "2023-02-26T17:59:00"                },                "label": "Session Timing"              },              "type": "ONLINE",              "tags": [                {                  "display": null,                  "descriptor": {                    "code": "status",                    "name": "status",                    "short_desc": null,                    "long_desc": null,                    "images": null                  },                  "code": null,                  "name": null,                  "list": [                    {                      "descriptor": {                        "code": "live",                        "name": "Live",                        "short_desc": null,                        "long_desc": null,                        "images": null                      },                      "code": null,                      "name": null                    }                  ]                },                {                  "display": null,                  "descriptor": {                    "code": "timeZone",                    "name": "timeZone",                    "short_desc": null,                    "long_desc": null,                    "images": null                  },                  "code": null,                  "name": null,                  "list": [                    {                      "descriptor": {                        "code": "Asia/Calcutta",                        "name": "Asia/Calcutta",                        "short_desc": null,                        "long_desc": null,                        "images": null                      },                      "code": null,                      "name": null                    }                  ]                }              ],              "agent": {                "person": {                  "name": "Tejash",                  "id": "63fa05f362820fd9e6beb82a"                }              }            }          ]        }      ]    },    "intent": null,    "order": null  }};
 	};
 
 	let result = {"message":{"catalog":{"providers":[]}}};
 
 	let messages = [];
-
+	let type = "";
 	onMount(() => {
 		store.subscribe(currentMessage => {
 			messages = [...messages, currentMessage];
+			if (currentMessage.includes("context")) {
+				const dsepResponse = JSON.parse(currentMessage)
+				type = dsepResponse.context.action;
+				if (dsepResponse.context.action === "on_search") {
+					result = dsepResponse;
+				}
+				if (dsepResponse.context.action === "on_select") {
+					result = dsepResponse;
+				}
+				if (dsepResponse.context.action === "on_confirm") {
+					result = dsepResponse;
+				}
+			}
+			if (currentMessage.includes('sunbird-rc.registry.create')) {
+				const registryResponse = JSON.parse(currentMessage)
+				debugger
+			}
 			log += '\n received message: ' + JSON.stringify(currentMessage);
 		})
 	})
+
+	const select = async (itemId, bppUri, messageId, transactionId) => {
+		console.log(searchText);
+		const resp = await fetch('/api/select', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({
+				bppUri, transactionId, messageId, itemId
+			})
+		})
+		const data = await resp.json()
+		log += JSON.stringify(data, null, 2)
+	}
+
+	const apply = async (itemId, bppUri, messageId, transactionId, fullfillmentId, mentorshipTitle) => {
+		console.log(searchText);
+		let name = prompt("Please enter your name", "xxx");
+		let emailId = prompt("Please enter your emailId", name+"@mail.com");
+		let card = prompt("Please enter your card details", "123412341234");
+		let resp = await fetch('/api/init', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({
+				bppUri, transactionId, messageId, itemId, fullfillmentId, card, emailId, name, mentorshipTitle
+			})
+		})
+		let data = await resp.json()
+		log += JSON.stringify(data, null, 2)
+		resp = await fetch('/api/confirm', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({
+				bppUri, transactionId, messageId, itemId, fullfillmentId, card, emailId, name, mentorshipTitle
+			})
+		})
+		data = await resp.json()
+		log += JSON.stringify(data, null, 2)
+	}
 
 </script>
 
@@ -53,18 +113,52 @@
 
 
 		<table>
-			{#if result.message.catalog.providers.length}
+			{#if type === "on_search" && result.message.catalog.providers.length}
 			<tr><td>Number of providers :{result.message.catalog.providers.length || ''}</td></tr>
 			{#each result.message.catalog.providers as provider}
 				<tr><td><h3>{provider.descriptor.name}</h3></td></tr>
 				{#each provider.items as item}
-					<tr><td>{item.descriptor.name}</td><td><button>Apply</button></td></tr>
+					<tr><td>{item.descriptor.name}</td><td><button on:click={() =>
+					select(item.id, result.context.bpp_uri, result.context.message_id, result.context.transaction_id )}>View Details</button></td></tr>
 				{/each}
 			{/each}
 			{:else}
 				<tr><td>Please search for mentors with keywords</td></tr>
 			{/if}
-		</table>
+			{#if type === "on_select" && Object.keys(result?.message?.order?.provider || {}).length > 0}
+				<tr><td><h3>{result?.message?.order?.provider.descriptor.name}</h3></td></tr>
+				{#each result?.message?.order?.provider.items as item}
+					<tr><td><b>TITLE:</b>{item.descriptor.name}</td><td>
+						{#if false}
+							<span>Applied</span>
+						{:else}
+							<button disabled='{new Date(result?.message?.order?.provider.fulfillments[0].time.range.end) - new Date() < 0}' on:click={() =>
+					apply(item.id, result.context.bpp_uri, result.context.message_id, result.context.transaction_id, item.fulfillment_ids[0], item.descriptor.name )}>{
+									new Date(result?.message?.order?.provider.fulfillments[0].time.range.end) - new Date() > 0 ? "Apply" : "Expired"
+							}</button>
+						{/if}
+
+					</td></tr>
+				{/each}
+				<h4>Mentor Details</h4>
+				{#each result?.message?.order?.provider.fulfillments as fulfillment}
+					<tr><td><b>Name:</b>{fulfillment.agent.person.name}</td></tr>
+					<tr><td><b>Start Date:</b>{fulfillment.time.range.start}</td></tr>
+					<tr><td><b>End Date:</b>{fulfillment.time.range.end}</td></tr>
+					<tr><td><b>Language:</b>{fulfillment.language}</td></tr>
+					<tr><td><b>Type:</b>{fulfillment.type}</td></tr>
+				{/each}
+				<h4>More Details</h4>
+				{#each result?.message?.order?.provider.items[0].tags as tag}
+					<b>{tag.descriptor.name}: </b>
+					<span>{tag.list?.[0].descriptor.name}</span>
+					<br/>
+				{/each}
+			{/if}
+			{#if type === "on_confirm"}
+				<h4>Join the session here: <a href='{result.message.order.fulfillments[0].tags[0].list[0].descriptor.name}'>{result.message.order.fulfillments[0].tags[0].list[0].descriptor.name}</a></h4>
+			{/if}
+			</table>
 		<textarea bind:value={log} style="position: absolute; bottom: 0"/>
 	{:else}
 		<a href="/signup">Enroll</a>
