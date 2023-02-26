@@ -3,7 +3,7 @@ use std::error::Error;
 use std::future;
 use std::future::Future;
 // Dependencies
-use actix_web::{App, HttpResponse, HttpServer, post, Responder, web};
+use actix_web::{App, cookie, HttpResponse, HttpServer, post, Responder, web};
 use actix_web::dev::{Service, ServiceRequest};
 use chrono::Utc;
 use diesel::prelude::*;
@@ -88,6 +88,7 @@ struct DSEPSearchRequest {
 }
 
 #[derive(Deserialize, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 struct SearchRequest {
     session_title: String
 }
