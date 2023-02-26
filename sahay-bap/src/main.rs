@@ -27,6 +27,7 @@ use actix_session::storage::CookieSessionStore;
 use actix_web::cookie::Cookie;
 use futures::TryFutureExt;
 use actix::{Actor, StreamHandler};
+use actix_web::web::Json;
 use actix_web_actors::ws;
 
 
@@ -646,6 +647,40 @@ async fn ws_notification_handler(
     resp
 }
 
+async fn on_status(
+    db_pool: web::Data<DbPool>,
+    on_status_request: web::Json<DSEPSearchRequest>,
+) -> impl Responder {
+    // info!("On Search API called {:?}", to_string(&on_status_request));
+    issue_credentials(&on_status_request).await;
+    return on_search(db_pool, on_status_request).await
+}
+
+async fn issue_credentials (on_status_request: &Json<DSEPSearchRequest>) -> Result<(), Box<dyn std::error::Error>> {
+    let url =  env::var("REGISTRY_URL").unwrap_or("http://localhost:8081/api/v1/ProofOfAssociation".to_string());
+    let name = "Tejash";
+    let json = format!(r#"{{ "name": "{}", "userId": "{}", "emailId": "{}", "type": "{}",
+    "associatedFor": "{}", "agentName": "{}", "startDate": "{}", "endDate": "{}" }}"#, name, name, name,
+                       on_status_request.context.as_ref().unwrap().domain.as_ref().unwrap(),
+                       on_status_request.message.as_ref().unwrap().order.as_ref().unwrap().provider.as_ref().unwrap().items.as_ref().unwrap()[0].descriptor.as_ref().unwrap().name.as_ref().unwrap(),
+                       on_status_request.message.as_ref().unwrap().order.as_ref().unwrap().provider.as_ref().unwrap().fulfillments.as_ref().unwrap()[0].agent.as_ref().unwrap().person.as_ref().unwrap().name.as_ref().unwrap(),
+                       on_status_request.message.as_ref().unwrap().order.as_ref().unwrap().provider.as_ref().unwrap().fulfillments.as_ref().unwrap()[0].time.as_ref().unwrap().range.as_ref().unwrap().start.as_ref().unwrap(),
+                       on_status_request.message.as_ref().unwrap().order.as_ref().unwrap().provider.as_ref().unwrap().fulfillments.as_ref().unwrap()[0].time.as_ref().unwrap().range.as_ref().unwrap().end.as_ref().unwrap());
+    let client = reqwest::Client::new();
+    let mut headers = HeaderMap::new();
+    headers.insert(CONTENT_TYPE, "application/json".parse().unwrap());
+    let response = client.post(url)
+        .headers(headers)
+        .body(json)
+        .send()
+        .await?;
+    let status = response.status();
+    let body = response.text().await?;
+    info!("Response Status: {}", status);
+    info!("Response Body: {}", body);
+    Ok(())
+}
+
 // Define the API routes for mentorship search
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -681,7 +716,7 @@ async fn main() -> std::io::Result<()> {
                 .route("/on_select", web::post().to(on_search))
                 .route("/on_confirm", web::post().to(on_search))
                 .route("/on_init", web::post().to(on_search))
-                .route("/on_status", web::post().to(on_search))
+                .route("/on_status", web::post().to(on_status))
                 .route("/on_cancel", web::post().to(on_search))
                 .route("/search", web::post().to(search))
                 .route("/health", web::get().to(health_check))
