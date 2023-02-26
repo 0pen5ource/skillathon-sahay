@@ -1,5 +1,4 @@
 use crate::schema::users;
-use chrono::NaiveDateTime;
 use diesel::prelude::*;
 
 #[derive(Queryable, Identifiable, Debug, PartialEq)]

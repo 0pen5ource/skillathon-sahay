@@ -1,7 +1,10 @@
 use std::env;
 use std::error::Error;
+use std::future;
+use std::future::Future;
 // Dependencies
 use actix_web::{App, HttpResponse, HttpServer, post, Responder, web};
+use actix_web::dev::{Service, ServiceRequest};
 use chrono::Utc;
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager, Pool};
@@ -18,6 +21,14 @@ use reqwest::header::{CONTENT_TYPE, HeaderMap, HeaderValue};
 use sahay_bap::schema::users;
 use sahay_bap::model::{User, NewUser};
 use serde::{Deserialize, Serialize};
+use jsonwebtoken::{encode, decode, Header, EncodingKey, DecodingKey, Validation, TokenData, Algorithm};
+use actix_session::{Session, SessionMiddleware};
+use actix_session::storage::CookieSessionStore;
+use actix_web::cookie::Cookie;
+use futures::TryFutureExt;
+use actix::{Actor, StreamHandler};
+use actix_web_actors::ws;
+
 
 // Database connection pool
 type DbPool = Pool<ConnectionManager<PgConnection>>;
@@ -418,6 +429,7 @@ async fn search(
 async fn user_signin(
     db_pool: web::Data<DbPool>,
     user: web::Json<UserSigninRequest>,
+    session: Session
 ) -> impl Responder {
     println!("{:?}", user);
     // Retrieve user info from database
@@ -436,6 +448,7 @@ async fn user_signin(
                 .set(users::otp.eq(""))
                 .execute(conn)
                 .unwrap();
+            session.insert("token", signed_token(db_user)).unwrap();
             HttpResponse::Ok().json(UserRegisterResponse {
                 status: "success".to_string(),
                 message: "Account activated successfully".to_string(),
@@ -465,6 +478,11 @@ async fn user_signin(
         })
     }
 }
+
+fn signed_token(users: &User) -> String {
+    "sahay".to_string()
+}
+
 /*
 // Define the API routes for user registration and login
 #[post("/api/register")]
@@ -560,6 +578,73 @@ async fn verify(
     Ok(Json(LoginResponse { access_token: token }))
 }
 */
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Claims {
+   sub: String,
+   company: String
+}
+/*
+pub fn jwt_auth_middleware(
+    req: ServiceRequest,
+    credentials: DecodingKey,
+) -> impl Future<Output = Result<ServiceRequest, dyn Error>> {
+    let auth_header = req.headers().get("Authorization");
+
+    match auth_header {
+        Some(header_value) => {
+            let bearer_token = header_value.to_str().unwrap().replace("Bearer ", "");
+
+            let token = match jsonwebtoken::decode::<Claims>(
+                &bearer_token,
+                &credentials,
+                &Validation::default()
+            ) {
+                Ok(token) => token,
+                Err(_) => {
+                    return Box::pin(futures::future::err(HttpResponse::Unauthorized().finish(), ));
+                },
+            };
+            req.extensions_mut().insert(token.claims);
+        }
+        None => {
+            return Box::pin(futures::future::err(HttpResponse::Unauthorized().finish()));
+        }
+    }
+
+    Box::pin(futures::future::ok(req))
+}
+
+ */
+struct MyWs;
+
+impl Actor for MyWs {
+    type Context = ws::WebsocketContext<Self>;
+}
+
+/// Handler for ws::Message message
+impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for MyWs {
+    fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
+        match msg {
+            Ok(ws::Message::Ping(msg)) => ctx.pong(&msg),
+            Ok(ws::Message::Text(text)) => ctx.text(text),
+            Ok(ws::Message::Binary(bin)) => ctx.binary(bin),
+            _ => (),
+        }
+    }
+}
+
+async fn ws_notification_handler(
+    req: actix_web::HttpRequest,
+    stream: web::Payload,
+    session: Session,
+    db: web::Data<Pool<ConnectionManager<PgConnection>>>,
+) -> Result<HttpResponse, actix_web::Error>  {
+    println!("got ws request: {:?}", req);
+    let resp = ws::start(MyWs {}, &req, stream);
+    resp
+}
+
 // Define the API routes for mentorship search
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -568,10 +653,26 @@ async fn main() -> std::io::Result<()> {
     let manager = ConnectionManager::<PgConnection>::new(database_url);
     let pool = Pool::builder().build(manager).unwrap();
 
+    let key = b"234234a";
+    let encoding_key = EncodingKey::from_secret(key);
+    let decoding_key = DecodingKey::from_secret(key);
+
     // Set up the Actix Web server and register the routes
     HttpServer::new(move || {
         App::new()
             .app_data(web::Data::new(pool.clone()))
+            .wrap(
+                // create cookie based session middleware
+                SessionMiddleware::builder(CookieSessionStore::default(), cookie::Key::from(&[0; 64]))
+                    .cookie_secure(false)
+                    .build()
+            )
+            .wrap_fn(move |req, srv| {
+               // jwt_auth_middleware(req, decoding_key.clone())
+               //     .map(|req| srv.call(req))
+               //     .map_err(|e| e.into())
+                srv.call(req)
+            })
             .service(web::scope("/api")
                 .route("/register", web::post().to(user_register))
                 .route("/verify", web::post().to(user_signin))
@@ -582,7 +683,9 @@ async fn main() -> std::io::Result<()> {
                 .route("/on_status", web::post().to(on_search))
                 .route("/on_cancel", web::post().to(on_search))
                 .route("/search", web::post().to(search))
-                .route("/health", web::get().to(health_check)))
+                .route("/health", web::get().to(health_check))
+                .route("/ws", web::get().to(ws_notification_handler))
+            )
     })
         .bind("0.0.0.0:6080")?
         .run()
