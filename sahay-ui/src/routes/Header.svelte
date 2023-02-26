@@ -1,12 +1,12 @@
 <script>
 	import { page } from '$app/stores';
-	import logo from '$lib/images/svelte-logo.svg';
+	import logo from '$lib/images/sahaj.svg';
 </script>
 
 <header>
 	<div class="corner">
-		<a href="https://kit.svelte.dev">
-			<img src={logo} alt="SvelteKit" />
+		<a href="https://sahaj.ai">
+			<img src={logo} alt="Sahaj" style="width: 100px; height: 40px"/>
 		</a>
 	</div>
 
@@ -47,7 +47,7 @@
 	}
 
 	.corner {
-		width: 3em;
+		width: 7em;
 		height: 3em;
 	}
 
