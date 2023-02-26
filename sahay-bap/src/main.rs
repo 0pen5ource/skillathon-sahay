@@ -1,3 +1,8 @@
+extern crate env_logger;
+#[macro_use]
+extern crate lazy_static;
+extern crate log;
+
 use std::collections::HashMap;
 use std::env;
 use std::error::Error;
@@ -6,37 +11,35 @@ use std::future::Future;
 use std::ops::Deref;
 use std::sync::Arc;
 use std::sync::atomic::AtomicUsize;
+use std::sync::Mutex;
 use std::time::Instant;
+
+use actix::{Actor, Addr, AsyncContext, Recipient, StreamHandler};
+use actix_session::{Session, SessionMiddleware};
+use actix_session::storage::CookieSessionStore;
 // Dependencies
 use actix_web::{App, cookie, HttpResponse, HttpServer, post, Responder, web};
+use actix_web::cookie::Cookie;
 use actix_web::dev::{Service, ServiceRequest};
+use actix_web::http::header::Accept;
+use actix_web::web::{Data, Json};
+use actix_web_actors::ws;
 use chrono::Utc;
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager, Pool};
 use diesel::sql_types::Uuid;
+use futures::TryFutureExt;
+use jsonwebtoken::{Algorithm, decode, DecodingKey, encode, EncodingKey, Header, TokenData, Validation};
 use log::{debug, error, info};
-use serde_json::{to_string, Value};
-
-extern crate log;
-extern crate env_logger;
-
 use rand::Rng;
 use reqwest::{Client, StatusCode};
 use reqwest::header::{CONTENT_TYPE, HeaderMap, HeaderValue};
-use sahay_bap::schema::users;
-use sahay_bap::model::{User, NewUser};
 use serde::{Deserialize, Serialize};
-use jsonwebtoken::{encode, decode, Header, EncodingKey, DecodingKey, Validation, TokenData, Algorithm};
-use actix_session::{Session, SessionMiddleware};
-use actix_session::storage::CookieSessionStore;
-use actix_web::cookie::Cookie;
-use futures::TryFutureExt;
-use actix::{Actor, Addr, AsyncContext, Recipient, StreamHandler};
-use actix_web::web::{Data, Json};
-use actix_web_actors::ws;
-#[macro_use]
-extern crate lazy_static;
-use std::sync::Mutex;
+use serde_json::{to_string, Value};
+
+use sahay_bap::model::{NewUser, User};
+use sahay_bap::schema::users;
+
 use crate::server::ChatServer;
 
 
@@ -735,6 +738,40 @@ async fn on_confirm(
     return on_search(db_pool, on_status_request, srv).await
 }
 
+async fn get_certificate_pdf(
+    db_pool: web::Data<DbPool>,
+    path: web::Path<String>,
+    srv: web::Data<Addr<server::ChatServer>>,
+) -> impl Responder {
+    let certificate_id = path.into_inner();
+    info!("On Confirm API called: {}", certificate_id);
+    let url =  env::var("REGISTRY_URL").unwrap_or("https://sahaay.xiv.in/registry/api/v1/ProofOfAssociation".to_string());
+    let client = reqwest::Client::new();
+    let mut headers = HeaderMap::new();
+    headers.insert("Accept", "application/pdf".parse().unwrap());
+    headers.insert("template-key", "mentor".parse().unwrap());
+    let response = client.get(format!("{}/{}", url, certificate_id))
+        .headers(headers)
+        .send()
+        .await;
+
+    match response {
+        Ok(data) => {
+            let x1 = data.bytes().await;
+            match x1 {
+                Ok(x) => {
+                    HttpResponse::Ok().append_header(("Content-Type", "application/pdf")).body(x)
+                }
+                _ => {HttpResponse::Ok().body("")    }
+            }
+
+
+        }
+        Err(_) => {HttpResponse::Ok().body("") }
+    }
+
+}
+
 async fn issue_credentials (on_confirm_request: &Json<DSEPSearchRequest>, srv: Data<Addr<ChatServer>>) -> Result<(), Box<dyn std::error::Error>> {
     let map = USERMAP.lock().unwrap();
     let transaction_id = on_confirm_request.context.as_ref().unwrap().transaction_id.as_ref().unwrap();
@@ -1039,6 +1076,7 @@ async fn main() -> std::io::Result<()> {
                 .route("/init", web::post().to(init))
                 .route("/confirm", web::post().to(confirm))
                 .route("/health", web::get().to(health_check))
+                .route("/pdf/{certificate_id}", web::get().to(get_certificate_pdf))
                 .route("/ws", web::get().to(chat_route))
             )
     })

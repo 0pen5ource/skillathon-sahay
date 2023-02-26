@@ -27,8 +27,9 @@
 
 	let messages = [];
 	let type = "";
+	let certificateOsid = "";
 	onMount(() => {
-		store.subscribe(currentMessage => {
+		store.subscribe(async currentMessage => {
 			messages = [...messages, currentMessage];
 			if (currentMessage.includes("context")) {
 				const dsepResponse = JSON.parse(currentMessage)
@@ -45,7 +46,7 @@
 			}
 			if (currentMessage.includes('sunbird-rc.registry.create')) {
 				const registryResponse = JSON.parse(currentMessage)
-				debugger
+				certificateOsid = registryResponse.result.ProofOfAssociation.osid
 			}
 			log += '\n received message: ' + JSON.stringify(currentMessage);
 		})
@@ -156,7 +157,8 @@
 				{/each}
 			{/if}
 			{#if type === "on_confirm"}
-				<h4>Join the session here: <a href='{result.message.order.fulfillments[0].tags[0].list[0].descriptor.name}'>{result.message.order.fulfillments[0].tags[0].list[0].descriptor.name}</a></h4>
+				<h4>Join the session here: <a target="_blank" href='{result.message.order.fulfillments[0].tags[0].list[0].descriptor.name}'>{result.message.order.fulfillments[0].tags[0].list[0].descriptor.name}</a></h4>
+				<a target="_blank" href='https://sahaay.xiv.in/bap/pdf/{certificateOsid}'>View Certificate</a>
 			{/if}
 			</table>
 		<textarea bind:value={log} style="position: absolute; bottom: 0"/>

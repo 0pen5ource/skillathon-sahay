@@ -26,7 +26,7 @@ services:
   registry:
     image: tejashjl/sunbird-rc-core:v0.0.13-6
     volumes:
-      - ${PWD}/schemas:/home/sunbirdrc/config/public/_schemas
+      - ./schemas:/home/sunbirdrc/config/public/_schemas
     environment:
       - connectionInfo_uri=jdbc:postgresql://db:5432/registry
       - connectionInfo_username=postgres

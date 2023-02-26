@@ -5,7 +5,8 @@ export default defineConfig({
 	plugins: [sveltekit()],
 	server: {
 		proxy: {
-			'/api': 'http://127.0.0.1:6080'
+			'/api': 'https://sahaay.xiv.in',
+			'/registry': 'https://sahaay.xiv.in'
 		}
 	}
 });
