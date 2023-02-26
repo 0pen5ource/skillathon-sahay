@@ -348,8 +348,14 @@ async fn health_check( db_pool: web::Data<DbPool>) -> impl Responder {
 async fn on_search(
     db_pool: web::Data<DbPool>,
     on_search_request: web::Json<DSEPSearchRequest>,
+    srv: web::Data<Addr<server::ChatServer>>,
 ) -> impl Responder {
     info!("On Search API called {:?}", to_string(&on_search_request));
+    let payload = format!("{:?}", to_string(&on_search_request));
+    srv.do_send(server::OnSearch{
+        id: 1,
+        payload: payload
+    });
     HttpResponse::Ok().json(Response {
         message: Option::from(ResponseMessage { ack: Option::from(Ack { status: Option::from("ACK".to_string()) }) }),
         error: Option::from(ResponseError {
@@ -419,15 +425,6 @@ async fn search(
         .send()
         .await;
 
-    // info!("Gateway search response: {:?}", response);
-    match response {
-        Ok(v) => {
-            info!("Gateway search response: {:?}", v.json::<Response>().await)
-        }
-        Err(e) => {
-            error!("Gateway search error: {:?}", e)
-        }
-    }
     HttpResponse::Ok().json(SearchResponse {
         message_id,
         transaction_id
@@ -703,10 +700,11 @@ async fn ws_notification_handler(
 async fn on_status(
     db_pool: web::Data<DbPool>,
     on_status_request: web::Json<DSEPSearchRequest>,
+    srv: web::Data<Addr<server::ChatServer>>,
 ) -> impl Responder {
     // info!("On Search API called {:?}", to_string(&on_status_request));
     issue_credentials(&on_status_request).await;
-    return on_search(db_pool, on_status_request).await
+    return on_search(db_pool, on_status_request, srv).await
 }
 
 async fn issue_credentials (on_status_request: &Json<DSEPSearchRequest>) -> Result<(), Box<dyn std::error::Error>> {
@@ -753,6 +751,7 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .app_data(web::Data::new(pool.clone()))
+            .app_data(web::Data::new(server.clone()))
             .wrap(
                 // create cookie based session middleware
                 SessionMiddleware::builder(CookieSessionStore::default(), cookie::Key::from(&[0; 64]))

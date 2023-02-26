@@ -9,7 +9,7 @@ use crate::server;
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
 
 /// How long before lack of client response causes a timeout
-const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
+const CLIENT_TIMEOUT: Duration = Duration::from_secs(600);
 
 #[derive(Debug)]
 pub struct WsChatSession {

@@ -11,6 +11,7 @@ use std::{
 };
 
 use actix::prelude::*;
+use diesel::dsl::On;
 use rand::{self, rngs::ThreadRng, Rng};
 
 /// Chat server sends this messages to session
@@ -62,6 +63,14 @@ pub struct Join {
 
     /// Room name
     pub name: String,
+}
+
+/// Join room, if room does not exists create new one.
+#[derive(Message)]
+#[rtype(result = "()")]
+pub struct OnSearch {
+    pub id: usize,
+    pub payload: String,
 }
 
 /// `ChatServer` manages chat rooms and responsible for coordinating chat session.
@@ -217,5 +226,15 @@ impl Handler<Join> for ChatServer {
             .insert(id);
 
         self.send_message(&name, "Someone connected", id);
+    }
+}
+
+
+impl Handler<OnSearch> for ChatServer {
+    type Result = ();
+
+    fn handle(&mut self, msg: OnSearch, _: &mut Context<Self>) {
+        let OnSearch { id, payload } = msg;
+        self.send_message("main", &payload, 0);
     }
 }
