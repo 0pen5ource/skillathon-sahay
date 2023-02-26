@@ -1,4 +1,6 @@
 <script>
+	import { onMount } from 'svelte';
+	import store from '../store.js';
 	import gurukul from '$lib/images/gurukul.png';
 	let token = 'sahay';
 	export const load = (async ({ cookies }) => {
@@ -23,6 +25,16 @@
 	};
 
 	let result = {"message":{"catalog":{"providers":[]}}};
+
+	let messages = [];
+
+	onMount(() => {
+		store.subscribe(currentMessage => {
+			messages = [...messages, currentMessage];
+			log += '\n received message: ' + JSON.stringify(currentMessage);
+		})
+	})
+
 </script>
 
 <svelte:head>
