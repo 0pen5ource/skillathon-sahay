@@ -31,7 +31,7 @@ use actix_session::{Session, SessionMiddleware};
 use actix_session::storage::CookieSessionStore;
 use actix_web::cookie::Cookie;
 use futures::TryFutureExt;
-use actix::{Actor, Addr, AsyncContext, Message, Recipient, StreamHandler};
+use actix::{Actor, Addr, AsyncContext, Recipient, StreamHandler};
 use actix_web::web::Json;
 use actix_web_actors::ws;
 
@@ -92,7 +92,7 @@ struct MentorshipSearchResponse {
 #[derive(Deserialize, Debug, Serialize)]
 struct DSEPSearchRequest {
     context: Option<Context>,
-    message: Option<MessageV1>,
+    message: Option<Message>,
 }
 
 #[derive(Deserialize, Debug, Serialize)]
@@ -122,7 +122,7 @@ struct Context {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-struct MessageV1 {
+struct Message {
     catalog: Option<Catalog>,
     intent: Option<Intent>,
     order: Option<Order>,
@@ -669,7 +669,7 @@ async fn chat_route(
     stream: web::Payload,
     srv: web::Data<Addr<server::ChatServer>>,
 ) -> Result<HttpResponse, actix_web::Error> {
-    println!("got ws request: {:?}", req);
+    info!("got ws request: {:?}", req);
     let result = ws::start(
         session::WsChatSession {
             id: 0,
@@ -681,7 +681,7 @@ async fn chat_route(
         &req,
         stream,
     );
-    println!("after ws request: {:?}", req);
+    info!("after ws request: {:?}", req);
     result
 }
 
