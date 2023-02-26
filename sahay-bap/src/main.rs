@@ -101,6 +101,15 @@ struct SearchRequest {
     session_title: String
 }
 
+#[derive(Deserialize, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SelectRequest {
+    bpp_uri: String,
+    transaction_id: String,
+    message_id: String,
+    item_id: String
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 struct Intent {
     item: Option<Item>,
@@ -732,6 +741,70 @@ async fn issue_credentials (on_status_request: &Json<DSEPSearchRequest>) -> Resu
     Ok(())
 }
 
+async fn select(
+    db_pool: web::Data<DbPool>,
+    select_request: web::Json<SelectRequest>,
+) -> impl Responder {
+    info!("Select API called {:?}", to_string(&select_request));
+    let url =  &select_request.bpp_uri;
+    let now = Utc::now();
+    let message_id = Option::from(String::from(&select_request.message_id));
+    let transaction_id = Option::from(String::from(&select_request.transaction_id));
+    let request_body = DSEPSearchRequest {
+        context: Option::from(Context {
+            domain: Option::from(String::from("dsep:mentoring")),
+            action: Option::from(String::from("search")),
+            bap_id: Option::from(String::from("https://sahaay.xiv.in/bap")),
+            bap_uri: Option::from(String::from("https://sahaay.xiv.in/bap")),
+            bpp_id: None,
+            bpp_uri: None,
+            timestamp: Option::from(String::from(now.to_rfc3339())),
+            message_id: message_id.clone(),
+            version: Option::from(String::from("1.0.0")),
+            ttl: Option::from(String::from("PT10M")),
+            transaction_id: transaction_id.clone(),
+        }),
+        message: Option::from(Message {
+            catalog: None,
+            intent: None,
+            order: Option::from(Order {
+                id: None,
+                state: None,
+                r#type: None,
+                provider: None,
+                items: Option::from(vec![Item {
+                    quantity: None,
+                    price: None,
+                    id: Option::from(String::from(&select_request.item_id)),
+                    category_ids: None,
+                    descriptor: None,
+                    fulfillment_ids: None,
+                    tags: None
+                }]),
+                fulfillments: None
+            })
+        }),
+    };
+    let client = Client::new();
+    let mut headers = HeaderMap::new();
+    headers.insert(
+        CONTENT_TYPE,
+        HeaderValue::from_static("application/json"),
+    );
+
+    let response = client
+        .post(url)
+        .headers(headers)
+        .json(&request_body)
+        .send()
+        .await;
+
+    HttpResponse::Ok().json(SearchResponse {
+        message_id: message_id.unwrap().clone(),
+        transaction_id: transaction_id.unwrap().clone()
+    })
+}
+
 // Define the API routes for mentorship search
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -774,6 +847,7 @@ async fn main() -> std::io::Result<()> {
                 .route("/on_status", web::post().to(on_status))
                 .route("/on_cancel", web::post().to(on_search))
                 .route("/search", web::post().to(search))
+                .route("/select", web::post().to(select))
                 .route("/health", web::get().to(health_check))
                 .route("/ws", web::get().to(chat_route))
             )
