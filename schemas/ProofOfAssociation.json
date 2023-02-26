@@ -1,0 +1,124 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "type": "object",
+  "properties": {
+    "ProofOfAssociation": {
+      "$ref": "#/definitions/ProofOfAssociation"
+    }
+  },
+  "required": [
+    "ProofOfAssociation"
+  ],
+  "title":"ProofOfAssociation",
+  "definitions": {
+    "ProofOfAssociation": {
+      "$id": "#/properties/ProofOfAssociation",
+      "type": "object",
+      "title": "The ProofOfAssociation Schema",
+      "required": [],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string"
+        },
+        "emailId": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "mentorship"
+          ]
+        },
+        "associatedFor": {
+          "type": "string"
+        },
+        "agentName": {
+          "type": "string"
+        },
+        "startDate": {
+          "type": "string"
+        },
+        "endDate": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "_osConfig": {
+    "internalFields": [],
+    "enableSearch": "false",
+    "indexFields": [],
+    "uniqueIndexFields": [],
+    "systemFields": [
+      "osCreatedAt",
+      "osUpdatedAt",
+      "osCreatedBy",
+      "osUpdatedBy"
+    ],
+    "credentialTemplate": {
+      "@context": [
+        "https://www.w3.org/2018/credentials/v1",
+        {
+          "@context": {
+            "@version": 1.1,
+            "@protected": true,
+            "id": "@id",
+            "type": "@type",
+            "schema": "https://schema.org/",
+            "ProofOfAssociation": {
+              "@id": "schema:ProofOfAssociation",
+              "@context": {
+                "id": "@id",
+                "@version": 1.1,
+                "@protected": true,
+                "nonTransferable": "pledge:nonTransferable"
+              }
+            },
+            "Person": {
+              "@id": "schema:Person",
+              "@context": {
+                "@version": 1.1,
+                "@protected": true,
+                "name": "schema:Text",
+                "userId": "schema:Text",
+                "emailId": "schema:Text",
+                "associatedType": "schema:Text",
+                "associatedFor": "schema:Text",
+                "agentName": "schema:Text",
+                "startDate": "schema:Text",
+                "endDate": "schema:Text"
+              }
+            }
+          }
+        }
+      ],
+      "type": [
+        "VerifiableCredential",
+        "ProofOfAssociation"
+      ],
+      "id": "https://dev-donor-registry.abdm.gov.in/pledgecredentials/{{osid}}",
+      "issuer": "https://dev-donor-registry.abdm.gov.in",
+      "issuanceDate": "{{osCreatedAt}}",
+      "credentialSubject": {
+        "type": "Person",
+        "name": "{{name}}",
+        "userId": "{{userId}}",
+        "emailId": "{{emailId}}",
+        "associatedType":  "{{type}}",
+        "associatedFor": "{{associatedFor}}",
+        "agentName":  "{{agentName}}",
+        "startDate": "{{startDate}}",
+        "endDate":  "{{endDate}}"
+      },
+      "nonTransferable": "true"
+    },
+    "inviteRoles":["anonymous"],
+    "roles": ["anonymous"],
+    "certificateTemplates": {
+      "mentor": "https://gist.githubusercontent.com/tejash-jl/8a41ba34e627bf4244f7c5dcdad901ad/raw/414f682327ecea5abc9f10516a35500aff4be6d1/poa.html"
+    }
+  }
+}
