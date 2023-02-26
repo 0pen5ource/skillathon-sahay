@@ -35,7 +35,7 @@ impl WsChatSession {
     ///
     /// also this method checks heartbeats from client
     fn hb(&self, ctx: &mut ws::WebsocketContext<Self>) {
-        /*ctx.run_interval(HEARTBEAT_INTERVAL, |act, ctx| {
+        ctx.run_interval(HEARTBEAT_INTERVAL, |act, ctx| {
             // check client heartbeats
             if Instant::now().duration_since(act.hb) > CLIENT_TIMEOUT {
                 // heartbeat timed out
@@ -52,7 +52,7 @@ impl WsChatSession {
             }
 
             ctx.ping(b"");
-        });*/
+        });
     }
 }
 
