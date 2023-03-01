@@ -140,9 +140,9 @@
 						{#if false}
 							<span>Applied</span>
 						{:else}
-							<button disabled='{new Date(result?.message?.order?.provider.fulfillments[0].time.range.end) - new Date() < 0}' on:click={() =>
+							<button on:click={() =>
 					apply(item.id, result.context.bpp_uri, result.context.message_id, result.context.transaction_id, item.fulfillment_ids[0], item.descriptor.name )}>{
-									new Date(result?.message?.order?.provider.fulfillments[0].time.range.end) - new Date() > 0 ? "Apply" : "Expired"
+									"Apply"
 							}</button>
 						{/if}
 
